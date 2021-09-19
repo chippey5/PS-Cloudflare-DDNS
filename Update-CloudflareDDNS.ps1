@@ -12,16 +12,19 @@ param (
     $Record
 )
 
-#Region Token Test
-## This block verifies that your API key is valid.
-## If not, the script will terminate.
-
-$uri = "https://api.cloudflare.com/client/v4/user/tokens/verify"
+# Build the request headers once. This headers will be used throughout the script.
 $headers = @{
     "X-Auth-Email" = $($Email)
     "Authorization" = "Bearer $($Token)"
     "Content-Type" = "application/json"
 }
+
+#Region Token Test
+## This block verifies that your API key is valid.
+## If not, the script will terminate.
+
+$uri = "https://api.cloudflare.com/client/v4/user/tokens/verify"
+
 $auth_result = Invoke-RestMethod -Method GET -Uri $uri -Headers $headers -SkipHttpErrorCheck
 if (-not($auth_result.result)) {
     Write-Output "API token validation failed. Error: $($auth_result.errors.message). Terminating script."
@@ -32,7 +35,7 @@ Write-Output "API token validation [$($Token)] success. $($auth_result.messages.
 #EndRegion
 
 #Region Get Zone ID
-## Retrieves the domain's zone identifier. If the the identifier is not found, the script will terminate.
+## Retrieves the domain's zone identifier based on the zone name. If the the identifier is not found, the script will terminate.
 $uri = "https://api.cloudflare.com/client/v4/zones?name=$($Domain)"
 $DnsZone = Invoke-RestMethod -Method GET -Uri $uri -Headers $headers -SkipHttpErrorCheck
 if (-not($DnsZone.result)) {
@@ -40,7 +43,7 @@ if (-not($DnsZone.result)) {
     # Exit script
     return
 }
-## The DNS zone ID
+## Store the DNS zone ID
 $zone_id = $DnsZone.result.id
 Write-Output "Domain zone [$($Domain)]: ID=$($zone_id)"
 #End Region
@@ -54,15 +57,15 @@ if (-not($DnsRecord.result)) {
     # Exit script
     return
 }
-## The existing IP address in the DNS record
+## Store the existing IP address in the DNS record
 $old_ip = $DnsRecord.result.content
-## The DNS record type value
+## Store the DNS record type value
 $record_type = $DnsRecord.result.type
-## The DNS record id value
+## Store the DNS record id value
 $record_id = $DnsRecord.result.id
-## The DNS record ttl value
+## Store the DNS record ttl value
 $record_ttl = $DnsRecord.result.ttl
-## The DNS record proxied value
+## Store the DNS record proxied value
 $record_proxied = $DnsRecord.result.proxied
 Write-Output "DNS record [$($Record)]: Type=$($record_type), IP=$($old_ip)"
 #EndRegion
@@ -72,8 +75,9 @@ $new_ip = (curl.exe -s 'http://icanhazip.com')
 Write-Output "Public IP Address: OLD=$($old_ip), NEW=$($new_ip)"
 #EndRegion
 
-# Compare current IP address with the DNS record
-# If the current IP address does not match the DNS record IP address, update the DNS record.
+#Region update Dynamic DNS Record
+## Compare current IP address with the DNS record
+## If the current IP address does not match the DNS record IP address, update the DNS record.
 if ($new_ip -ne $old_ip) {
     Write-Output "The current IP address does not match the DNS record IP address. Attempt to update."
     ## Update the DNS record with the new IP address
@@ -88,7 +92,7 @@ if ($new_ip -ne $old_ip) {
     $Update = Invoke-RestMethod -Method PUT -Uri $uri -Headers $headers -SkipHttpErrorCheck -Body $body
     if (($Update.errors)) {
         Write-Output "DNS record update failed. Error: $($Update[0].errors.message)"
-        # Exit script
+        ## Exit script
         return
     }
 
@@ -98,3 +102,4 @@ if ($new_ip -ne $old_ip) {
 else {
     Write-Output "The current IP address and DNS record IP address are the same. There's no need to update."
 }
+#EndRegion
