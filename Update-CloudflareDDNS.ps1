@@ -14,9 +14,9 @@ param (
 
 # Build the request headers once. This headers will be used throughout the script.
 $headers = @{
-    "X-Auth-Email" = $($Email)
+    "X-Auth-Email"  = $($Email)
     "Authorization" = "Bearer $($Token)"
-    "Content-Type" = "application/json"
+    "Content-Type"  = "application/json"
 }
 
 #Region Token Test
@@ -71,7 +71,7 @@ Write-Output "DNS record [$($Record)]: Type=$($record_type), IP=$($old_ip)"
 #EndRegion
 
 #Region Get Current Public IP Address
-$new_ip = (curl.exe -s 'http://icanhazip.com')
+$new_ip = Invoke-RestMethod -Uri 'https://v4.ident.me'
 Write-Output "Public IP Address: OLD=$($old_ip), NEW=$($new_ip)"
 #EndRegion
 
@@ -89,6 +89,7 @@ if ($new_ip -ne $old_ip) {
         ttl     = $record_ttl
         proxied = $record_proxied
     } | ConvertTo-Json
+
     $Update = Invoke-RestMethod -Method PUT -Uri $uri -Headers $headers -SkipHttpErrorCheck -Body $body
     if (($Update.errors)) {
         Write-Output "DNS record update failed. Error: $($Update[0].errors.message)"
