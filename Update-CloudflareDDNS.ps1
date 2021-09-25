@@ -12,7 +12,7 @@ param (
     $Record
 )
 
-# Build the request headers once. This headers will be used throughout the script.
+# Build the request headers once. These headers will be used throughout the script.
 $headers = @{
     "X-Auth-Email"  = $($Email)
     "Authorization" = "Bearer $($Token)"
