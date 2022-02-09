@@ -48,7 +48,7 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/chippey5/PS-Cloudflare
 6. Test the script:
 
 ```
-pwsh Update-CloudflareDDNS.ps1 -LogPath "path_to_your_logs" -VaultName "your_vault_name" -VaultPass "your_vault_password"
+pwsh Update-CloudflareDDNS.ps1 -LogPath "path_to_your_logs" -VaultName "your_vault_name" -VaultPass "your_vault_password" -Record_Type "your_dns_records_type_to_update"
 ```
 
 ## Further notes

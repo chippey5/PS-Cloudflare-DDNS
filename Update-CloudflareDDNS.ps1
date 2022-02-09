@@ -8,7 +8,9 @@ param (
     [parameter(Mandatory)]
     [String]$VaultName,
     [parameter(Mandatory)]
-    [String]$VaultPass
+    [String]$VaultPass,
+    [ValidateSet("A", "AAAA", "CNAME", "HTTPS", "TXT", "SRV", "LOC", "MX", "NS", "CERT", "DNSKEY", "DS", "NAPTR", "SMIMEA", "SSHFP", "SVCB", "TLSA", "URI")]
+    [String]$Record_Type = "A"
     
 )
 function logThis($Text) {
@@ -77,7 +79,7 @@ logThis -Text "Domain zone [$($auth.domain)]: ID=$($zone_id)"
 
 #Region Get DNS Record
 ## Retrieve the existing DNS record details from Cloudflare.
-$uri = "https://api.cloudflare.com/client/v4/zones/$($zone_id)/dns_records?name=$($auth.record)"
+$uri = "https://api.cloudflare.com/client/v4/zones/$($zone_id)/dns_records?name=$($auth.record)&type=A"
 $DnsRecord = Invoke-RestMethod -Method GET -Uri $uri -Headers $headers -SkipHttpErrorCheck
 if (-not($DnsRecord.result)) {
     logThis -Text "Search for the DNS record [$($auth.record)] return zero results. Terminating script."
@@ -86,15 +88,9 @@ if (-not($DnsRecord.result)) {
 }
 ## Store the existing IP address in the DNS record
 $old_ip = $DnsRecord.result.content
-## Store the DNS record type value
-$record_type = $DnsRecord.result.type
 ## Store the DNS record id value
 $record_id = $DnsRecord.result.id
-## Store the DNS record ttl value
-$record_ttl = $DnsRecord.result.ttl
-## Store the DNS record proxied value
-$record_proxied = $DnsRecord.result.proxied
-logThis -Text "DNS record [$($auth.record)]: Type=$($record_type), IP=$($old_ip)"
+logThis -Text "DNS record [$($auth.record)]: Type=$($DnsRecord.result.type), IP=$($old_ip)"
 #EndRegion
 
 #Region Get Current Public IP Address
@@ -110,11 +106,11 @@ if (($new_ip -ne $old_ip) -and ($new_ip)) {
     ## Update the DNS record with the new IP address
     $uri = "https://api.cloudflare.com/client/v4/zones/$($zone_id)/dns_records/$($record_id)"
     $body = @{
-        type    = $record_type
+        type    = $DnsRecord.result.type
         name    = $auth.record
         content = $new_ip
-        ttl     = $record_ttl
-        proxied = $record_proxied
+        ttl     = $DnsRecord.result.ttl
+        proxied = $DnsRecord.result.proxied
     } | ConvertTo-Json
 
     $Update = Invoke-RestMethod -Method PUT -Uri $uri -Headers $headers -SkipHttpErrorCheck -Body $body
